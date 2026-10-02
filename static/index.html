@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Loom</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+:root{--bg:#faf9f6;--fg:#1f1d1a;--mut:#6b675f;--card:#fff;--bd:#e4e0d8;--acc:#3b5bdb;--note:#e8590c}
+@media (prefers-color-scheme:dark){:root{--bg:#161513;--fg:#ece9e2;--mut:#9a958a;--card:#201f1c;--bd:#33312c;--acc:#7b93f5;--note:#f59f6b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;height:100vh;display:grid;grid-template-columns:minmax(320px,1fr) 1fr}
+@media(max-width:800px){body{grid-template-columns:1fr;grid-template-rows:1fr 40vh;height:auto;min-height:100vh}}
+section{display:flex;flex-direction:column;min-height:0;padding:16px}
+h1{font-size:18px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+#log{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px 0}
+.m{padding:10px 14px;border-radius:12px;max-width:90%;border:1px solid var(--bd);background:var(--card);white-space:pre-wrap}
+.m.u{align-self:flex-end;background:var(--acc);color:#fff;border-color:transparent}
+.m.think{color:var(--mut);font-style:italic}
+form{display:flex;gap:8px;margin-top:8px}
+input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font:inherit}
+button{padding:8px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font:inherit;cursor:pointer}
+button.p{background:var(--acc);color:#fff;border-color:transparent}
+.row{display:flex;gap:8px;margin-top:8px}
+#graph{flex:1;border:1px solid var(--bd);border-radius:12px;background:var(--card);min-height:200px}
+#detail{margin-top:8px;font-size:14px;color:var(--mut);min-height:60px}
+#detail a{color:var(--acc)}
+.theme{border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin-top:8px;background:var(--card)}
+.theme h3{margin:0 0 4px;font-size:15px}.theme .q{font-style:italic;color:var(--mut)}
+.theme li{font-size:14px;margin-top:4px}.theme a{color:var(--acc)}
+</style></head><body>
+<section>
+  <h1>Loom <span style="font-weight:400;color:var(--mut);font-size:13px">a thinking partner</span></h1>
+  <div id="log"></div>
+  <form id="f"><input id="i" placeholder="Describe your idea…" autocomplete="off" autofocus><button class="p">Send</button></form>
+  <div class="row"><button id="found">What have you found?</button><button id="end">End session</button></div>
+</section>
+<section>
+  <h1>Idea landscape <span id="stat" style="font-weight:400;color:var(--mut);font-size:13px"></span></h1>
+  <div id="graph"></div>
+  <div id="detail">Click a node. Blue = your concepts, orange = research notes.</div>
+</section>
+<script>
+const $=id=>document.getElementById(id);let sid=null,net=null,nodesById={};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function add(text,cls=''){const d=document.createElement('div');d.className='m '+cls;d.textContent=text;$('log').append(d);$('log').scrollTop=1e9;return d}
+async function api(path,method='GET',body){const r=await fetch('/api/'+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});if(!r.ok)throw new Error(await r.text());return r.json()}
+function draw(g){
+  nodesById={};g.nodes.forEach(n=>nodesById[n.id]=n);
+  const nodes=g.nodes.map(n=>({id:n.id,label:n.type==='idea_concept'?n.label:'',title:n.label,shape:'dot',size:n.type==='idea_concept'?18:10,
+    color:n.type==='idea_concept'?css('--acc'):css('--note'),font:{color:css('--fg'),size:14}}));
+  const data={nodes:new vis.DataSet(nodes),edges:new vis.DataSet(g.edges)};
+  if(!net){net=new vis.Network($('graph'),data,{physics:{stabilization:false,barnesHut:{springLength:90}},edges:{color:{color:css('--bd')},smooth:false},interaction:{hover:true}});
+    net.on('click',p=>{const n=nodesById[p.nodes[0]];if(!n){return}
+      $('detail').innerHTML=n.type==='idea_concept'?`<b>${esc(n.label)}</b> — a concept from your idea.`:
+      `<b>${esc(n.detail.claim)}</b><br>Tension: ${esc(n.detail.tension_or_gap)}<br><a href="${esc(n.detail.source_url)}" target="_blank" rel="noopener">source</a>`})}
+  else net.setData(data);
+  $('stat').textContent=`${g.nodes.filter(n=>n.type==='idea_concept').length} concepts · ${g.nodes.filter(n=>n.type==='resource_note').length} notes`;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+(async()=>{const s=await api('session','POST');sid=s.session_id;add(s.reply)})();
+$('f').onsubmit=async e=>{e.preventDefault();const t=$('i').value.trim();if(!t||!sid)return;$('i').value='';add(t,'u');const w=add('thinking…','think');
+  try{const r=await api('chat','POST',{session_id:sid,message:t});w.remove();add(r.reply);draw(r.graph)}catch(err){w.textContent='Something went wrong: '+err.message}};
+$('found').onclick=async()=>{const {notes}=await api('findings/'+sid);
+  add(notes.length?notes.map(n=>`• ${n.claim}\n  ↳ ${n.tension_or_gap}\n  ${n.source_url}`).join('\n\n'):"Nothing yet — I've been asking, not searching, so far.")};
+$('end').onclick=async()=>{const w=add('Drawing the map…','think');const r=await api('end/'+sid,'POST');w.remove();
+  const box=add(r.summary||'');for(const t of r.themes||[]){const d=document.createElement('div');d.className='theme';
+    d.innerHTML=`<h3>${esc(t.title)}</h3><div class="q">${esc(t.open_question||'')}</div><ul>${(t.notes||[]).map(n=>`<li>${esc(n.claim)} <a href="${esc(n.source_url)}" target="_blank" rel="noopener">source</a></li>`).join('')}</ul>`;
+    $('log').append(d)}$('log').scrollTop=1e9;$('i').disabled=true};
+</script></body></html>
