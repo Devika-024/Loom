@@ -1,66 +1,244 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Loom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 <style>
-:root{--bg:#faf9f6;--fg:#1f1d1a;--mut:#6b675f;--card:#fff;--bd:#e4e0d8;--acc:#3b5bdb;--note:#e8590c}
-@media (prefers-color-scheme:dark){:root{--bg:#161513;--fg:#ece9e2;--mut:#9a958a;--card:#201f1c;--bd:#33312c;--acc:#7b93f5;--note:#f59f6b}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;height:100vh;display:grid;grid-template-columns:minmax(320px,1fr) 1fr}
-@media(max-width:800px){body{grid-template-columns:1fr;grid-template-rows:1fr 40vh;height:auto;min-height:100vh}}
-section{display:flex;flex-direction:column;min-height:0;padding:16px}
-h1{font-size:18px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
-#log{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px 0}
-.m{padding:10px 14px;border-radius:12px;max-width:90%;border:1px solid var(--bd);background:var(--card);white-space:pre-wrap}
-.m.u{align-self:flex-end;background:var(--acc);color:#fff;border-color:transparent}
-.m.think{color:var(--mut);font-style:italic}
-form{display:flex;gap:8px;margin-top:8px}
-input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font:inherit}
-button{padding:8px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font:inherit;cursor:pointer}
-button.p{background:var(--acc);color:#fff;border-color:transparent}
-.row{display:flex;gap:8px;margin-top:8px}
-#graph{flex:1;border:1px solid var(--bd);border-radius:12px;background:var(--card);min-height:200px}
-#detail{margin-top:8px;font-size:14px;color:var(--mut);min-height:60px}
-#detail a{color:var(--acc)}
-.theme{border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin-top:8px;background:var(--card)}
-.theme h3{margin:0 0 4px;font-size:15px}.theme .q{font-style:italic;color:var(--mut)}
-.theme li{font-size:14px;margin-top:4px}.theme a{color:var(--acc)}
+:root{color-scheme:light;--paper:#F4EFE6;--ink:#1A1A18;--mut:#7a7468;--line:#cfc8ba;--card:#faf7f0;
+--orange:#F26B3A;--blue:#5B9BE6;--lav:#CFC3F0;--lavd:#8f7fd6;--peach:#F6D5C0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;min-height:100vh;
+ background-image:radial-gradient(60% 50% at 15% 20%,rgba(246,213,192,.55),transparent),radial-gradient(50% 50% at 90% 10%,rgba(207,195,240,.45),transparent)}
+.serif{font-family:Newsreader,Georgia,serif}.mono{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut)}
+main{display:grid;grid-template-columns:minmax(340px,1fr) minmax(340px,1fr);gap:24px;max-width:1280px;margin:0 auto;padding:20px 24px;min-height:100vh}
+@media(max-width:860px){main{grid-template-columns:1fr;padding:16px}}
+.stage{display:flex;flex-direction:column;align-items:center;min-height:calc(100vh - 40px)}
+nav{display:flex;gap:22px;font:400 20px Newsreader,serif;align-items:center;width:100%;justify-content:center;position:relative}
+nav button{background:none;border:0;font:inherit;color:var(--mut);cursor:pointer;padding:2px 0}
+nav button.on{color:var(--ink);font-weight:500}
+nav .brand{position:absolute;left:0;font-style:italic;font-size:22px}
+.orbwrap{position:relative;width:min(340px,70vw);aspect-ratio:1;margin:28px 0 8px;flex:none}
+.orb{position:absolute;inset:14%;border-radius:58% 42% 55% 45%/50% 55% 45% 50%;filter:blur(14px);
+ background:radial-gradient(circle at 30% 30%,#fff 0,var(--lav) 38%,#b9a8ee 70%,var(--peach) 120%);animation:breathe 7s ease-in-out infinite}
+.orb.busy{animation:breathe 1.6s ease-in-out infinite;filter:blur(10px) saturate(1.3)}
+@keyframes breathe{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.07) rotate(8deg);border-radius:45% 55% 42% 58%/55% 45% 55% 45%}}
+.ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.greet{font:400 30px/1.2 Newsreader,serif;text-align:center;margin:6px 0 4px}
+.status{color:var(--mut);text-align:center;min-height:22px}
+.q{position:relative;max-width:520px;text-align:center;font:italic 400 24px/1.35 Newsreader,serif;margin:14px 8px 0;padding:0 8px}
+.q small{display:block;font:11px 'JetBrains Mono',monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);font-style:normal;margin-bottom:6px}
+.you{margin-top:10px;color:var(--mut);font-size:13px;max-width:480px;text-align:center}
+.grow{flex:1}
+.bar{display:flex;gap:8px;width:100%;max-width:560px;margin-top:20px}
+.bar input{flex:1;padding:14px 20px;border-radius:999px;border:1px solid #b6a9e0;background:rgba(250,247,240,.85);font:inherit;color:var(--ink);outline:none}
+.bar input:focus{border-color:var(--lavd);box-shadow:0 0 0 4px rgba(207,195,240,.45)}
+.pill{padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);font:inherit;color:var(--ink);cursor:pointer}
+.pill:hover{border-color:var(--ink)}.pill.go{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.actions{display:flex;gap:8px;margin:12px 0 4px}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card::before,.card::after,.card i::before,.card i::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--ink);opacity:.55}
+.card::before{top:6px;left:6px;border-right:0;border-bottom:0}.card::after{top:6px;right:6px;border-left:0;border-bottom:0}
+.card i::before{bottom:6px;left:6px;border-right:0;border-top:0}.card i::after{bottom:6px;right:6px;border-left:0;border-top:0}
+.panel{display:flex;flex-direction:column;gap:14px;padding-top:6px}
+#graph{height:min(52vh,460px);min-height:260px;padding:0}
+.legend{display:flex;gap:14px;flex-wrap:wrap}.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--c)}
+#detail{min-height:70px}#detail a{color:var(--orange)}
+.tl{position:relative;overflow-x:auto;padding:26px 6px 6px;min-height:84px}
+.tl::before{content:"";position:absolute;left:0;right:0;top:38px;border-top:1px solid var(--ink);opacity:.5}
+.tl ol{list-style:none;margin:0;padding:0;display:flex;gap:14px;min-width:max-content}
+.tl li{position:relative;padding-top:20px}
+.tl li::before{content:"";position:absolute;top:0;left:12px;width:9px;height:9px;border-radius:50%;background:var(--c);margin-top:6px}
+.tl li b{display:inline-block;font:500 12px Inter;padding:3px 10px;border-radius:7px;background:var(--c);color:#fff;margin-top:8px}
+.tl .empty{color:var(--mut);padding-top:20px}
+.hist{width:100%;max-width:560px;margin-top:18px;display:flex;flex-direction:column;gap:12px;overflow:auto;max-height:55vh}
+.hist div{font-size:14px;padding-left:12px;border-left:1px solid var(--line)}
+.hist .a{font:italic 18px/1.35 Newsreader,serif;border-left-color:var(--orange)}
+.sheet{position:fixed;inset:0;background:rgba(244,239,230,.88);backdrop-filter:blur(6px);display:none;overflow:auto;padding:28px 16px;z-index:5}
+.sheet.show{display:block}.sheet .in{max-width:720px;margin:0 auto}
+.sheet h2{font:400 32px Newsreader,serif;margin:6px 0 14px}
+.note{margin-top:12px}.note b{font:500 17px Newsreader,serif}.note a{color:var(--orange);word-break:break-all;font-size:13px}
+.theme{margin-top:14px}.theme h3{font:500 22px Newsreader,serif;margin:0}.theme .oq{font:italic 17px Newsreader,serif;color:var(--mut);margin:2px 0 8px}
+.theme li{font-size:14px;margin-top:6px}.theme a{color:var(--orange)}
+
+.app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+aside{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:10px;padding:18px 14px;border-right:1px solid var(--line);background:rgba(250,247,240,.6);backdrop-filter:blur(6px)}
+aside .logo{font:italic 400 26px Newsreader,serif;cursor:pointer;padding:0 6px}
+aside .nav{display:flex;flex-direction:column;gap:2px}
+.item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--ink);border:1px solid transparent;font-size:14px;background:none;text-align:left;font-family:inherit;width:100%}
+.item:hover{background:rgba(207,195,240,.25)}.item.on{background:var(--card);border-color:var(--line)}
+.item .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .x{opacity:0;color:var(--mut);cursor:pointer;padding:0 4px}.item:hover .x{opacity:1}
+.item .dot{width:8px;height:8px;border-radius:50%;background:var(--lavd);flex:none}.item .dot.end{background:var(--line)}
+#list{overflow:auto;display:flex;flex-direction:column;gap:2px;flex:1}
+.content{min-width:0}
+.home{max-width:680px;margin:0 auto;padding:24px;text-align:center;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.home h1{font:400 clamp(34px,5vw,50px)/1.1 Newsreader,serif;margin:8px 0 10px}
+.home h1 em{color:var(--orange)}
+.home .sub{color:var(--mut);max-width:520px;margin:0 auto 22px;font-size:16px}
+.home .bar{margin:0 auto}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:44px;text-align:left}
+@media(max-width:860px){.steps{grid-template-columns:1fr}.app{grid-template-columns:1fr}aside{position:static;height:auto;max-height:230px;border-right:0;border-bottom:1px solid var(--line)}}
+.steps .card b{font:500 20px Newsreader,serif;display:block;margin:4px 0}
+.steps p{margin:0;color:var(--mut);font-size:14px}
+.recent{margin-top:22px;text-align:left;width:100%;max-width:560px}
+.recent .card{margin-top:10px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}
+.recent .card:hover{border-color:var(--ink)}
+.home .orbwrap{margin:0 auto}
+
+.app.home-mode{grid-template-columns:1fr}.app.home-mode aside{display:none}
+@media(min-width:861px){.app.collapsed{grid-template-columns:64px 1fr}}
+.top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+#collapse{border:1px solid var(--line);background:var(--card);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--ink);font-size:15px;flex:none}
+#collapse:hover{border-color:var(--ink)}
+.app.collapsed aside{padding:18px 10px;align-items:center}
+.app.collapsed .lbl,.app.collapsed #list{display:none}
+.app.collapsed .top{flex-direction:column;gap:12px}
+.app.collapsed aside .pill,.app.collapsed .item{width:42px;height:42px;padding:0;justify-content:center}
+.ic{font-size:18px;line-height:1}
+.manifesto{margin:54px auto 0;max-width:640px;text-align:left}
+.manifesto p{font:400 22px/1.45 Newsreader,serif;margin:10px 0}
+.manifesto p em{color:var(--orange)}
+.demo{margin-top:40px;text-align:left;display:grid;gap:12px}
+.demo .u{font-size:14px;color:var(--mut);border-left:1px solid var(--line);padding-left:12px}
+.demo .a{font:italic 22px/1.35 Newsreader,serif;border-left:2px solid var(--orange);padding-left:14px}
+.demo .why{font-size:13px;color:var(--mut);padding-left:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:44px;text-align:left}
+@media(max-width:860px){.two{grid-template-columns:1fr}}
+.two ul{margin:8px 0 0;padding-left:18px;color:var(--mut);font-size:14px}.two li{margin:5px 0}
+.two b{font:500 22px Newsreader,serif}
+.engines{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.engines span{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card)}
+.engines span::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.foot{margin-top:22px;color:var(--mut);font-size:10px}
+.chatfab{position:fixed;top:18px;right:22px;z-index:3;display:flex;align-items:center;gap:6px}
+.home{position:relative}
 </style></head><body>
-<section>
-  <h1>Loom <span style="font-weight:400;color:var(--mut);font-size:13px">a thinking partner</span></h1>
-  <div id="log"></div>
-  <form id="f"><input id="i" placeholder="Describe your idea…" autocomplete="off" autofocus><button class="p">Send</button></form>
-  <div class="row"><button id="found">What have you found?</button><button id="end">End session</button></div>
+<div class="app home-mode" id="app">
+<aside>
+ <div class="top"><div class="logo lbl" id="logo">Loom</div><button id="collapse" title="Collapse sidebar">‹</button></div>
+ <button class="pill go" id="newIdea"><span class="ic">+</span><span class="lbl"> New idea</span></button>
+ <div class="nav"><button class="item" id="chatNav"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="t lbl">Chat</span></button><button class="item" id="goHome"><span class="ic">⌂</span><span class="t lbl">Home</span></button></div>
+ <div class="mono lbl" style="padding:6px 6px 0">Your ideas</div>
+ <div id="list"></div>
+ <div class="mono lbl" style="padding:0 6px">Live search by SerpApi</div>
+</aside>
+<div class="content">
+<section class="home" id="home">
+ <button class="pill chatfab" id="chatBtn" title="Open chat"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg> Chat</button>
+ <div class="orbwrap" style="width:min(170px,40vw);margin:0 auto 4px"><div class="orb"></div></div>
+ <div class="mono">Loom · a thinking partner</div>
+ <h1>Think it through.<br><em>Don’t have it thought for you.</em></h1>
+ <p class="sub">Most AI brainstorming hands you an answer. Loom asks the questions that sharpen your idea, while quietly searching the live web behind the scenes.</p>
+ <form class="bar" id="hf"><input id="hi" placeholder="What are you working on?" autocomplete="off"><button class="pill go">Begin</button></form>
+ <div id="herr" style="color:var(--orange);font-size:13px;margin-top:8px"></div>
+ <div class="mono" style="margin-top:10px">A campus app · a research question · a half-formed startup</div>
+
+ <div class="engines mono"><span style="--c:#5B9BE6">Google Scholar for research</span><span style="--c:#F26B3A">Google News for markets</span><span style="--c:#8f7fd6">Google Search for the rest</span></div>
+ <div class="recent" id="recent"></div>
+ <div class="foot mono">Built for the SerpApi India Hackathon 2026</div>
 </section>
-<section>
-  <h1>Idea landscape <span id="stat" style="font-weight:400;color:var(--mut);font-size:13px"></span></h1>
-  <div id="graph"></div>
-  <div id="detail">Click a node. Blue = your concepts, orange = research notes.</div>
-</section>
+<div id="work" style="display:none">
+<main>
+ <section class="stage">
+  <nav><span class="brand">Loom</span><button id="tOv" class="on">Overview</button><button id="tHi">History</button></nav>
+  <div id="vOv" style="display:contents">
+   <div class="orbwrap"><div class="orb" id="orb"></div>
+    <svg class="ring" viewBox="0 0 100 100"><path d="M10 38 A42 42 0 0 1 62 9" fill="none" stroke="#1A1A18" stroke-width=".25" opacity=".5"/><path d="M92 58 A42 42 0 0 1 60 91" fill="none" stroke="#1A1A18" stroke-width=".25" opacity=".5"/><path d="M12 66 A42 42 0 0 0 28 84" fill="none" stroke="#1A1A18" stroke-width=".25" opacity=".5"/></svg></div>
+   <div class="greet" id="greet">Tell me your idea.</div>
+   <div class="status mono" id="status">Ask, and I'll ask back</div>
+   <div class="q" id="q"></div>
+   <div class="you" id="you"></div>
+  </div>
+  <div id="vHi" class="hist" style="display:none"></div>
+  <div class="grow"></div>
+  <div class="actions"><button class="pill" id="found">What have you found?</button><button class="pill" id="end">End session</button></div>
+  <form class="bar" id="f"><input id="i" placeholder="Describe your idea…" autocomplete="off" autofocus><button class="pill go">Send</button></form>
+ </section>
+ <section class="panel">
+  <div class="mono">Idea landscape · <span id="stat">0 concepts · 0 notes</span></div>
+  <div class="card" id="graph"><i></i></div>
+  <div class="legend mono"><span style="--c:var(--ink)">Your concept</span><span style="--c:var(--blue)">Scholar</span><span style="--c:var(--orange)">News</span><span style="--c:var(--lavd)">Google</span></div>
+  <div class="card" id="detail"><i></i><span class="mono">Select a dot</span></div>
+  <div class="mono">Searches</div>
+  <div class="card tl"><i></i><ol id="tl"><li class="empty">None yet — the searching starts once you name a concept.</li></ol></div>
+ </section>
+</main></div></div></div>
+<div class="sheet" id="sheet"><div class="in"><button class="pill" id="close">Close</button><div id="sheetBody"></div></div></div>
 <script>
-const $=id=>document.getElementById(id);let sid=null,net=null,nodesById={};
-const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-function add(text,cls=''){const d=document.createElement('div');d.className='m '+cls;d.textContent=text;$('log').append(d);$('log').scrollTop=1e9;return d}
-async function api(path,method='GET',body){const r=await fetch('/api/'+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});if(!r.ok)throw new Error(await r.text());return r.json()}
+const $=id=>document.getElementById(id);let sid=null,net=null,nodesById={},hist=[];
+const COL={research:'#5B9BE6',market:'#F26B3A',general:'#8f7fd6'},ENG={research:'Scholar',market:'News',general:'Google'};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(p,m='GET',b){const r=await fetch('/api/'+p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});if(!r.ok)throw new Error(await r.text());return r.json()}
+function setQ(t,label='Loom asks'){$('q').innerHTML=`<small>${label}</small>${esc(t)}`}
+function busy(on){$('orb').classList.toggle('busy',on);$('status').textContent=on?'Analysing your insights…':'Ask, and I’ll ask back'}
+function renderHist(){$('vHi').innerHTML=hist.map(h=>`<div class="${h.r==='a'?'a':''}">${esc(h.t)}</div>`).join('')}
+function tab(t){$('vOv').style.display=t==='ov'?'contents':'none';$('vHi').style.display=t==='hi'?'flex':'none';$('tOv').classList.toggle('on',t==='ov');$('tHi').classList.toggle('on',t==='hi')}
+$('tOv').onclick=()=>tab('ov');$('tHi').onclick=()=>{renderHist();tab('hi')};
 function draw(g){
   nodesById={};g.nodes.forEach(n=>nodesById[n.id]=n);
-  const nodes=g.nodes.map(n=>({id:n.id,label:n.type==='idea_concept'?n.label:'',title:n.label,shape:'dot',size:n.type==='idea_concept'?18:10,
-    color:n.type==='idea_concept'?css('--acc'):css('--note'),font:{color:css('--fg'),size:14}}));
-  const data={nodes:new vis.DataSet(nodes),edges:new vis.DataSet(g.edges)};
-  if(!net){net=new vis.Network($('graph'),data,{physics:{stabilization:false,barnesHut:{springLength:90}},edges:{color:{color:css('--bd')},smooth:false},interaction:{hover:true}});
-    net.on('click',p=>{const n=nodesById[p.nodes[0]];if(!n){return}
-      $('detail').innerHTML=n.type==='idea_concept'?`<b>${esc(n.label)}</b> — a concept from your idea.`:
-      `<b>${esc(n.detail.claim)}</b><br>Tension: ${esc(n.detail.tension_or_gap)}<br><a href="${esc(n.detail.source_url)}" target="_blank" rel="noopener">source</a>`})}
+  const hasC=g.nodes.some(n=>n.type==='idea_concept');
+  const nodes=g.nodes.map(n=>n.type==='idea_concept'
+    ?{id:n.id,label:n.label,shape:'dot',size:14,color:'#1A1A18',font:{face:'Newsreader',size:17,color:'#1A1A18'}}
+    :{id:n.id,label:'',title:n.label,shape:'dot',size:9,color:COL[n.detail.bucket]||COL.general});
+  const edges=g.edges.map(e=>({...e}));
+  if(hasC){nodes.push({id:'hub',label:'your idea',shape:'dot',size:22,color:{background:'#F4EFE6',border:'#1A1A18'},borderWidth:1.5,font:{face:'Newsreader',size:20,color:'#1A1A18'}});
+    g.nodes.filter(n=>n.type==='idea_concept').forEach(n=>edges.push({from:'hub',to:n.id,dashes:[2,4]}))}
+  const data={nodes:new vis.DataSet(nodes),edges:new vis.DataSet(edges)};
+  if(!net){net=new vis.Network($('graph'),data,{physics:{stabilization:false,barnesHut:{springLength:80,gravitationalConstant:-3500}},
+    edges:{color:{color:'#b9b2a3'},width:.8,smooth:false},interaction:{hover:true}});
+    net.on('click',p=>{const n=nodesById[p.nodes[0]];if(!n)return;
+      $('detail').innerHTML=n.type==='idea_concept'?`<i></i><span class="mono">Concept</span><div class="serif" style="font-size:20px">${esc(n.label)}</div>`
+      :`<i></i><span class="mono">${ENG[n.detail.bucket]||'Google'} · note</span><div class="serif" style="font-size:19px">${esc(n.detail.claim)}</div><div style="color:var(--mut);margin:4px 0">Tension: ${esc(n.detail.tension_or_gap)}</div><a href="${esc(n.detail.source_url)}" target="_blank" rel="noopener" class="mono">source ↗</a>`})}
   else net.setData(data);
   $('stat').textContent=`${g.nodes.filter(n=>n.type==='idea_concept').length} concepts · ${g.nodes.filter(n=>n.type==='resource_note').length} notes`;
 }
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-(async()=>{const s=await api('session','POST');sid=s.session_id;add(s.reply)})();
-$('f').onsubmit=async e=>{e.preventDefault();const t=$('i').value.trim();if(!t||!sid)return;$('i').value='';add(t,'u');const w=add('thinking…','think');
-  try{const r=await api('chat','POST',{session_id:sid,message:t});w.remove();add(r.reply);draw(r.graph)}catch(err){w.textContent='Something went wrong: '+err.message}};
+function drawTl(s){if(!s.length){$('tl').innerHTML='<li class="empty">None yet — the searching starts once you name a concept.</li>';return}$('tl').innerHTML=s.map(x=>`<li style="--c:${COL[x.bucket]||COL.general}"><span class="mono">${ENG[x.bucket]||'Google'}</span><br><b>${esc(x.concept)}</b></li>`).join('')}
+function sheet(html){$('sheetBody').innerHTML=html;$('sheet').classList.add('show')}
+$('close').onclick=()=>$('sheet').classList.remove('show');
+let closing=null,ended=false;
+const WELCOME="Tell me about the project idea you're working on — a few plain sentences is plenty.";
+function show(v){$('app').classList.toggle('home-mode',v==='home');$('home').style.display=v==='home'?'flex':'none';$('work').style.display=v==='work'?'block':'none';$('goHome').classList.toggle('on',v==='home');$('chatNav').classList.toggle('on',v==='work');renderList()}
+let sessions=[];
+async function refreshList(){try{sessions=await api('sessions')}catch(e){sessions=sessions||[]}renderList();renderRecent()}
+function renderList(){$('list').innerHTML=sessions.map(s=>`<div class="item ${s.id===sid&&$('work').style.display!=='none'?'on':''}" data-id="${s.id}"><span class="dot ${s.ended?'end':''}"></span><span class="t">${esc(s.title)}</span><span class="x" data-del="${s.id}" title="Delete">×</span></div>`).join('')||'<div class="mono" style="padding:6px">Nothing yet</div>'}
+function renderRecent(){$('recent').innerHTML=sessions.length?'<div class="mono">Pick up where you left off</div>'+sessions.slice(0,5).map(s=>`<div class="card" data-id="${s.id}"><i></i><span class="serif" style="font-size:19px">${esc(s.title)}</span><span class="mono">${s.concepts} concepts · ${s.notes} notes${s.ended?' · closed':''}</span></div>`).join(''):''}
+document.addEventListener('click',async e=>{
+  const d=e.target.closest('[data-del]');if(d){e.stopPropagation();await api('session/'+d.dataset.del,'DELETE');if(d.dataset.del===sid){sid=null;show('home')}await refreshList();return}
+  const it=e.target.closest('[data-id]');if(it)openSession(it.dataset.id)});
+async function openSession(id){
+  const s=await api('session/'+id);sid=id;ended=s.ended;closing=s.closing;
+  hist=s.history.map(h=>({r:h.role==='user'?'u':'a',t:h.text}));
+  if(net){net.destroy();net=null}
+  $('detail').innerHTML='<i></i><span class="mono">Select a dot</span>';
+  draw(s.graph);drawTl(s.searches);
+  const lastQ=[...hist].reverse().find(h=>h.r==='a'),lastU=[...hist].reverse().find(h=>h.r==='u');
+  setQ(lastQ?lastQ.t:WELCOME);$('you').textContent=lastU?'“'+(lastU.t.length>140?lastU.t.slice(0,140)+'…':lastU.t)+'”':'';
+  $('greet').textContent=ended?'Here is where your idea stands':(hist.length?'What do you make of this?':'Tell me your idea.');
+  $('i').disabled=ended;$('end').textContent=ended?'View landscape':'End session';
+  tab('ov');show('work');if(!ended)$('i').focus()}
+function herr(m){$('herr').textContent=m||''}
+async function newIdea(first){
+  herr('');
+  try{const s=await api('session','POST');sid=s.session_id;await refreshList();await openSession(sid)}
+  catch(e){herr('Could not start a chat \u2014 is the server running? ('+String(e.message||e).slice(0,120)+')');return}
+  if(first)await send(first)}
+async function openChat(){if(sid){try{return await openSession(sid)}catch(e){sid=null}}await refreshList();if(sessions.length)return openSession(sessions[0].id);return newIdea()}
+async function send(t){
+  if(!t||!sid||ended)return;hist.push({r:'u',t});$('you').textContent='“'+(t.length>140?t.slice(0,140)+'…':t)+'”';$('greet').textContent='Thinking it through';busy(true);
+  try{const r=await api('chat','POST',{session_id:sid,message:t});hist.push({r:'a',t:r.reply});setQ(r.reply);draw(r.graph);drawTl(r.searches);$('greet').textContent='What do you make of this?'}
+  catch(err){setQ('Something went wrong: '+err.message,'Error')}busy(false);refreshList()}
+$('f').onsubmit=e=>{e.preventDefault();const t=$('i').value.trim();$('i').value='';send(t)};
+$('hf').onsubmit=e=>{e.preventDefault();const t=$('hi').value.trim();$('hi').value='';newIdea(t)};
+$('newIdea').onclick=()=>newIdea();$('chatBtn').onclick=openChat;$('chatNav').onclick=openChat;$('goHome').onclick=()=>{show('home');refreshList()};$('logo').onclick=$('goHome').onclick;
 $('found').onclick=async()=>{const {notes}=await api('findings/'+sid);
-  add(notes.length?notes.map(n=>`• ${n.claim}\n  ↳ ${n.tension_or_gap}\n  ${n.source_url}`).join('\n\n'):"Nothing yet — I've been asking, not searching, so far.")};
-$('end').onclick=async()=>{const w=add('Drawing the map…','think');const r=await api('end/'+sid,'POST');w.remove();
-  const box=add(r.summary||'');for(const t of r.themes||[]){const d=document.createElement('div');d.className='theme';
-    d.innerHTML=`<h3>${esc(t.title)}</h3><div class="q">${esc(t.open_question||'')}</div><ul>${(t.notes||[]).map(n=>`<li>${esc(n.claim)} <a href="${esc(n.source_url)}" target="_blank" rel="noopener">source</a></li>`).join('')}</ul>`;
-    $('log').append(d)}$('log').scrollTop=1e9;$('i').disabled=true};
+  sheet(`<div class="mono">On request</div><h2>What I’ve found</h2>`+(notes.length?notes.map(n=>`<div class="card note"><i></i><span class="mono" style="color:${COL[n.bucket]}">${ENG[n.bucket]||'Google'} · ${esc(n.concept)}</span><br><b>${esc(n.claim)}</b><div style="color:var(--mut)">Tension: ${esc(n.tension_or_gap)}</div><a href="${esc(n.source_url)}" target="_blank" rel="noopener">${esc(n.source_url)}</a></div>`).join(''):`<p class="serif" style="font-size:20px">Nothing yet — I’ve been asking, not searching.</p>`))};
+function showClosing(r){sheet(`<div class="mono">Closing landscape</div><h2>Your idea, mapped</h2><p class="serif" style="font-size:20px">${esc(r.summary||'')}</p>`+(r.themes||[]).map(t=>`<div class="card theme"><i></i><h3>${esc(t.title)}</h3><div class="oq">${esc(t.open_question||'')}</div><ul>${(t.notes||[]).map(n=>`<li>${esc(n.claim)} <a href="${esc(n.source_url)}" target="_blank" rel="noopener">source ↗</a></li>`).join('')}</ul></div>`).join(''))}
+$('end').onclick=async()=>{if(ended&&closing)return showClosing(closing);busy(true);$('greet').textContent='Drawing the map…';
+  try{closing=await api('end/'+sid,'POST');ended=true;$('greet').textContent='Here is where your idea stands';$('i').disabled=true;$('end').textContent='View landscape';showClosing(closing);refreshList()}
+  catch(err){setQ('Could not close the session: '+err.message,'Error')}busy(false)};
+function setCollapsed(c){$('app').classList.toggle('collapsed',c);$('collapse').textContent=c?'\u203a':'\u2039';$('collapse').title=c?'Expand sidebar':'Collapse sidebar';try{localStorage.setItem('loomCollapsed',c?'1':'0')}catch(e){}}
+$('collapse').onclick=()=>setCollapsed(!$('app').classList.contains('collapsed'));
+try{if(localStorage.getItem('loomCollapsed')==='1')setCollapsed(true)}catch(e){}
+show('home');refreshList();
 </script></body></html>

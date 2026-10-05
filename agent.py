@@ -46,9 +46,12 @@ class Session:
     concepts: dict = field(default_factory=dict)  # lower name -> display name
     searched: set = field(default_factory=set)
     notes: list = field(default_factory=list)
+    searches: list = field(default_factory=list)  # [{concept, bucket, query, hits}]
     nodes: list = field(default_factory=list)
     edges: list = field(default_factory=list)
     ended: bool = False
+    title: str = ""
+    closing: dict | None = None
 
     def _node(self, nid, label, kind, **extra):
         if not any(n["id"] == nid for n in self.nodes):
@@ -101,6 +104,7 @@ def _background(s: Session, message: str):
     s.searched.add(concept.lower())
     try:
         results = run_search(plan["query"], plan.get("bucket", "general"))
+        s.searches.append({"concept": concept, "bucket": plan.get("bucket", "general"), "query": plan["query"], "hits": len(results)})
         if not results:
             return
         raw = "\n".join(f"[{i}] {r['title']} — {r['snippet']} ({r['url']})" for i, r in enumerate(results))
@@ -121,6 +125,8 @@ def _background(s: Session, message: str):
 
 
 def chat(s: Session, message: str) -> str:
+    if not s.title:
+        s.title = message.strip()[:48]
     s.history.append({"role": "user", "text": message})
     _background(s, message)
     ctx = f"Conversation so far:\n{_transcript(s)}\n"
@@ -148,4 +154,5 @@ def landscape(s: Session) -> dict:
         out = {"summary": "Session ended.", "themes": [{"title": "Everything found", "open_question": "", "note_indices": list(range(len(s.notes)))}]}
     for t in out.get("themes", []):
         t["notes"] = [s.notes[i] for i in t.pop("note_indices", []) if isinstance(i, int) and 0 <= i < len(s.notes)]
+    s.closing = out
     return out

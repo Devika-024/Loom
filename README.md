@@ -20,7 +20,7 @@ Single session, in memory, no login.
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # add SERPAPI_API_KEY and ANTHROPIC_API_KEY
+cp .env.example .env   # add SERPAPI_API_KEY and your Gemini API key as LOOM_MODEL
 uvicorn main:app --reload
 # open http://localhost:8000
 ```

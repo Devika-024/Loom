@@ -38,10 +38,32 @@ def new_session():
     return {"session_id": s.id, "reply": agent.WELCOME}
 
 
+@app.get("/api/sessions")
+def sessions():
+    return [
+        {"id": s.id, "title": s.title or "New idea", "concepts": sum(n["type"] == "idea_concept" for n in s.nodes),
+         "notes": len(s.notes), "ended": s.ended}
+        for s in reversed(list(SESSIONS.values()))
+    ]
+
+
+@app.get("/api/session/{sid}")
+def session_state(sid: str):
+    s = get(sid)
+    return {"id": s.id, "title": s.title, "history": s.history, "graph": s.graph(),
+            "searches": s.searches, "ended": s.ended, "closing": s.closing}
+
+
+@app.delete("/api/session/{sid}")
+def delete_session(sid: str):
+    SESSIONS.pop(sid, None)
+    return {"ok": True}
+
+
 @app.post("/api/chat")
 def chat(m: Msg):
     s = get(m.session_id)
-    return {"reply": agent.chat(s, m.message), "graph": s.graph()}
+    return {"reply": agent.chat(s, m.message), "graph": s.graph(), "searches": s.searches}
 
 
 @app.get("/api/findings/{sid}")
